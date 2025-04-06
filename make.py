@@ -3,17 +3,48 @@ import json
 import random
 import numpy as np
 from PIL import Image
+import hashlib
+import base64
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 # Define input and output directories here
 INPUT_DIR = "input_images"
 OUTPUT_DIR = "output_json"
 
-def process_rgb_images():
+def get_encryption_key(password):
+    """
+    Generate a Fernet encryption key from password
+    """
+    password_bytes = password.encode()
+    salt = b'anthropicsalt123'  # In production, you'd want to generate and store a unique salt
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=100000,
+    )
+    key = base64.urlsafe_b64encode(kdf.derive(password_bytes))
+    return key
+
+def encrypt_data(data, password):
+    """
+    Encrypt data using the password
+    """
+    key = get_encryption_key(password)
+    fernet = Fernet(key)
+    data_bytes = json.dumps(data).encode()
+    encrypted_data = fernet.encrypt(data_bytes)
+    return base64.b64encode(encrypted_data).decode()
+
+def process_rgb_images(password):
     """
     Process all RGB images in the input directory:
     1. Add random numbers to each channel (RGB) of each pixel
-    2. Save processed image as JSON in output_dir
-    3. Save random numbers used as JSON in output_dir
+    2. Encrypt the processing details using the password
+    3. Save processed image as JSON in output_dir
+    4. Save encrypted random values as JSON in output_dir
     """
     # Create output directory if it doesn't exist
     if not os.path.exists(OUTPUT_DIR):
@@ -48,26 +79,29 @@ def process_rgb_images():
                     for c in range(channels):
                         # Get current pixel value
                         current_value = int(img_array[h, w, c])
-                        
+                       
                         random_val = random.randint(256, 999)
-                        
+                       
+                        # These are the lines we want to encrypt with the password
                         random_values[h, w, c] = current_value + random_val
                         processed_img[h, w, c] = random_val
            
             # Get base name for output files
             base_name = os.path.splitext(filename)[0]
            
-            # Save processed image as JSON
+            # Save processed image as JSON (encrypted)
             processed_json_path = os.path.join(OUTPUT_DIR, f"{base_name}.json")
+            encrypted_processed = encrypt_data(processed_img.tolist(), password)
             with open(processed_json_path, 'w') as f:
-                json.dump(processed_img.tolist(), f)
+                f.write(encrypted_processed)
            
-            # Save random values as JSON
+            # Save random values as JSON (encrypted)
             random_json_path = os.path.join(OUTPUT_DIR, f"{base_name}a.json")
+            encrypted_random = encrypt_data(random_values.tolist(), password)
             with open(random_json_path, 'w') as f:
-                json.dump(random_values.tolist(), f)
+                f.write(encrypted_random)
            
-            print(f"Processed {filename}")
+            print(f"Processed and encrypted {filename}")
            
         except Exception as e:
             print(f"Error processing {filename}: {e}")
@@ -79,6 +113,7 @@ def is_image_file(filename):
 
 # Execute the script
 if __name__ == "__main__":
-    print(f"Starting image processing from {INPUT_DIR} to {OUTPUT_DIR}")
-    process_rgb_images()
-    print(f"Processing complete. Modified images and random values saved to {OUTPUT_DIR}")
+    print(f"Starting secure image processing from {INPUT_DIR} to {OUTPUT_DIR}")
+    password = input("Enter encryption password: ")
+    process_rgb_images(password)
+    print(f"Processing complete. Encrypted images and random values saved to {OUTPUT_DIR}")
