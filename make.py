@@ -39,8 +39,8 @@ def process_rgb_images():
             height, width, channels = img_array.shape
            
             # Generate random numbers for each pixel and channel
-            random_values = np.zeros((height, width, channels), dtype=np.uint8)
-            processed_img = np.zeros((height, width, channels), dtype=np.uint8)
+            random_values = np.zeros((height, width, channels), dtype=np.int32)
+            processed_img = np.zeros((height, width, channels), dtype=np.int32)
            
             # For each pixel and channel, add a random number that doesn't exceed 255
             for h in range(height):
@@ -49,17 +49,10 @@ def process_rgb_images():
                         # Get current pixel value
                         current_value = int(img_array[h, w, c])
                         
-                        # Calculate max value that can be added (avoid overflow)
-                        max_add = 255 - current_value
+                        random_val = random.randint(256, 999)
                         
-                        # Handle case where pixel is already at maximum value (255)
-                        if max_add <= 0:
-                            random_val = 0
-                        else:
-                            random_val = random.randint(0, max_add)
-                        
-                        random_values[h, w, c] = random_val
-                        processed_img[h, w, c] = current_value + random_val
+                        random_values[h, w, c] = current_value + random_val
+                        processed_img[h, w, c] = random_val
            
             # Get base name for output files
             base_name = os.path.splitext(filename)[0]

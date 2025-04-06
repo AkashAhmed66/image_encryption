@@ -42,11 +42,11 @@ def regenerate_images():
                 random_data = json.load(f)
             
             # Convert to numpy arrays
-            processed_array = np.array(processed_data, dtype=np.uint8)
-            random_array = np.array(random_data, dtype=np.uint8)
+            processed_array = np.array(processed_data, dtype=np.int32)
+            random_array = np.array(random_data, dtype=np.int32)
             
             # Reconstruct original image by subtracting random values
-            original_array = processed_array - random_array
+            original_array = np.array(random_array - processed_array, dtype=np.uint8) 
             
             # Create PIL image from numpy array
             reconstructed_img = Image.fromarray(original_array)
